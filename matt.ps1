@@ -35,7 +35,7 @@ while ($run -eq 0) {
     $color_data += 0
     $color_data += 1
     $first = 0
-    foreach($file in (Get-ChildItem $dir -Exclude *.ps1, *.txt, *.pdf, "results")) { #this part turns each file into a csv and then gets the data from it
+    foreach($file in (Get-ChildItem $dir *.xls)) { #this part turns each file into a csv and then gets the data from it
         $newname = $file.FullName -replace '\.xls$', '.csv'
         $ExcelWB = new-object -comobject excel.application
         $Workbook = $ExcelWB.Workbooks.Open($file.FullName) 
@@ -159,9 +159,9 @@ while ($run -eq 0) {
         }
         $dir = $PSScriptRoot
         foreach($file in (Get-ChildItem $dir  *.csv)) {
-        $yay = "yay"
-        Write-Output $file
-        Remove-Item $file.FullName
+            $yay = "yay"
+            Write-Output $file
+            Remove-Item $file.FullName
         }
         $actual_print = @(@())
 
