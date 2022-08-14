@@ -3,17 +3,21 @@
 # To execute the script without agreeing with the execution policy
 Set-ExecutionPolicy Bypass -Scope Process
 #Install-Module importexcel
-# Defines the directory where the file is located
-[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12;
-if (!(Get-Module -Name "importexcel ")) {
-    write-host "Install module"
-    Install-Module importexcel -Scope CurrentUser -AllowClobber -Force
-   }
+if(Get-Module -ListAvailable -Name importexcel){
+    "module is installed, continue"
+}else{
+    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12;
+    if (!(Get-Module -Name "importexcel ")) {
+        write-host "Install module"
+        Install-Module importexcel -Scope CurrentUser -AllowClobber -Force
+       }
+}
+
 $dir = $PSScriptRoot
 $run = 0
 $new_dict = $dir +"\results"
 if(Test-Path -Path $new_dict){
-    continue
+    "continue"
 }else{
     New-Item -Path ($dir + "\results") -ItemType "directory"
     $user = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
@@ -26,8 +30,18 @@ $ACL | Set-Acl -Path $new_dict
 (Get-ACL -Path $new_dict).Access | Format-Table IdentityReference,FileSystemRights,AccessControlType,IsInherited,InheritanceFlags -AutoSize #>
 #$dir = $PSScriptRoot
 #Write-Output $dir
-while ($run -eq 0) {
 
+foreach($file in (Get-ChildItem $dir *.xls)) {
+    $newname = $file.FullName -replace '\.xls$', '.csv'
+    $ExcelWB = new-object -comobject excel.application
+    $Workbook = $ExcelWB.Workbooks.Open($file.FullName) 
+    $Workbook.SaveAs($newname,6)
+    $Workbook.Close($false)
+    $ExcelWB.quit()
+    Write-Output $newname
+    #Start-sleep -Seconds .01
+}
+while ($run -eq 0) {
     $dir = $PSScriptRoot
     $store = Read-Host -Prompt "What store do you want info about?"
     $print_data = @(@())
@@ -35,26 +49,18 @@ while ($run -eq 0) {
     $color_data += 0
     $color_data += 1
     $first = 0
-    foreach($file in (Get-ChildItem $dir *.xls)) { #this part turns each file into a csv and then gets the data from it
-        $newname = $file.FullName -replace '\.xls$', '.csv'
-        $ExcelWB = new-object -comobject excel.application
-        $Workbook = $ExcelWB.Workbooks.Open($file.FullName) 
-        $Workbook.SaveAs($newname,6)
-        $Workbook.Close($false)
-        $ExcelWB.quit()
-        Write-Output $newname
-        Start-sleep -Seconds .25
+    foreach($file in (Get-ChildItem $dir *.csv)) { #this part turns each file into a csv and then gets the data from it
         $a = @()
         #Start-sleep -Seconds 5
-        $a = Get-Content $newname | Select-Object -First 5 | Select-Object -Last 1
+        $a = Get-Content $file | Select-Object -First 5 | Select-Object -Last 1
         #Write-Output $a
         if($a -match $store){ #if the store matches the invoice
             $data = @()
-            $data = Get-Content $newname | Select-Object -Skip 12
+            $data = Get-Content $file | Select-Object -Skip 12
             #Write-Output $data[0]
             $temp = @()
             $counter = 0
-            $data = Get-Content $newname | Select-Object -Skip 12
+            $data = Get-Content $file | Select-Object -Skip 12
             For($k=0;$k -lt $data.Length; $k += 2){#get the length of the order
                 #Get this sorted, something needs to be done so that the duplicate stores don't just add to the bottom of list
                 $temp = $data[$k].split(',')
@@ -65,7 +71,7 @@ while ($run -eq 0) {
                     $counter += 2
                 }
             }
-            $data = Get-Content $newname | Select-Object -Skip 12 #skips to the actual sale stuff
+            $data = Get-Content $file | Select-Object -Skip 12 #skips to the actual sale stuff
 
             For($i=0; $i -lt $counter; $i += 2){#populates a 2d array of everything that was in the csv
                 $temp = $data[$i].split(",")
@@ -158,11 +164,7 @@ while ($run -eq 0) {
 
         }
         $dir = $PSScriptRoot
-        foreach($file in (Get-ChildItem $dir  *.csv)) {
-            $yay = "yay"
-            Write-Output $file
-            Remove-Item $file.FullName
-        }
+
         $actual_print = @(@())
 
         $actual_color = @(@())
@@ -225,4 +227,9 @@ while ($run -eq 0) {
         }else{
             $run = 1
         }
+}
+foreach($file in (Get-ChildItem $dir  *.csv)) {
+    $yay = "yay"
+    Write-Output $file
+    Remove-Item $file.FullName
 }
