@@ -52,15 +52,15 @@ while ($run -eq 0) {
     foreach($file in (Get-ChildItem $dir *.csv)) { #this part turns each file into a csv and then gets the data from it
         $a = @()
         #Start-sleep -Seconds 5
-        $a = Get-Content $file | Select-Object -First 5 | Select-Object -Last 1
+        $a = Get-Content $file.FullName | Select-Object -First 5 | Select-Object -Last 1
         #Write-Output $a
         if($a -match $store){ #if the store matches the invoice
             $data = @()
-            $data = Get-Content $file | Select-Object -Skip 12
+            $data = Get-Content $file.FullName | Select-Object -Skip 12
             #Write-Output $data[0]
             $temp = @()
             $counter = 0
-            $data = Get-Content $file | Select-Object -Skip 12
+            $data = Get-Content $file.FullName  | Select-Object -Skip 12
             For($k=0;$k -lt $data.Length; $k += 2){#get the length of the order
                 #Get this sorted, something needs to be done so that the duplicate stores don't just add to the bottom of list
                 $temp = $data[$k].split(',')
@@ -71,7 +71,7 @@ while ($run -eq 0) {
                     $counter += 2
                 }
             }
-            $data = Get-Content $file | Select-Object -Skip 12 #skips to the actual sale stuff
+            $data = Get-Content $file.FullName  | Select-Object -Skip 12 #skips to the actual sale stuff
 
             For($i=0; $i -lt $counter; $i += 2){#populates a 2d array of everything that was in the csv
                 $temp = $data[$i].split(",")
@@ -210,17 +210,22 @@ while ($run -eq 0) {
             }
 
         }
-        #Write-Output $actual_print[1]
-        $newname = $dir + "\results.csv"
-        $outputfile = $dir + "\" + "results" + "\" + $store + "_" + "results.xls"
-        #Write-Output $print_data[1]
-        $actual_print | % { $_ -join ','} | Out-File $newname
-        Import-CSV $newname | Export-Excel $outputfile
-        #Import-CSV $inputfile | Export-Excel $outputfile
-        Remove-Item $newname
-        Write-Output "All Done!"
-        $end_message = "Your data is saved in a new excel file called " + $outputfile
-        Write-Output $end_message
+        Write-Output $dir
+        if($actual_print.Length -eq 0) {
+            "No stores were found with that name. Either something is misspelled, or they haven't ordered anything. Try again"
+        }else{
+            $newname = $dir + "\results.csv"
+            $outputfile = $dir + "\" + "results" + "\" + $store + "_" + "results.xls"
+            #Write-Output $print_data[1]
+            $actual_print | % { $_ -join ','} | Out-File $newname
+            Import-CSV $newname | Export-Excel $outputfile
+            #Import-CSV $inputfile | Export-Excel $outputfile
+            Remove-Item $newname
+            Write-Output "All Done!"
+            $end_message = "Your data is saved in a new excel file called " + $outputfile
+            Write-Output $end_message
+        }
+
         $again = Read-Host -Prompt "Do you want to do another store [Yes] or [No]?"
         if($again -match "yes"){
             $run = 0
